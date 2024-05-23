@@ -542,9 +542,9 @@ const indexer = async () => {
 
       if (block.nextblockhash) {
         await RedisInstance.set("last_indexed_block", block.nextblockhash);
-        await RedisInstance.set("synced", "true");
-        nextBlock = block.nextblockhash;
       }
+
+      await RedisInstance.set("synced", "true");
     } catch (e) {
       console.log(nextBlock);
       console.log(e);
