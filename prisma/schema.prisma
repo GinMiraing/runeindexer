@@ -16,6 +16,9 @@ model rune {
   location_txid String @db.Char(64)
   location_vout Int    @db.UnsignedInt
   burned        Int    @db.UnsignedTinyInt
+
+  @@index([location_txid, location_vout, burned])
+  @@index([holder, burned])
 }
 
 model rune_action {
