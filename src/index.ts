@@ -345,56 +345,60 @@ const indexer = async () => {
           }
 
           if (etching && !isInvalid) {
-            await DatabaseInstance.rune.upsert({
-              create: {
-                rune_id: runeId,
-                rune_name: etching.rune || "",
-                symbol: etching.symbol || "",
-                etching: tx.txid,
-                holder: "",
-                location_txid:
-                  "0000000000000000000000000000000000000000000000000000000000000000",
-                location_vout: 0,
-                burned: 0,
-              },
-              update: {},
+            const runeData = await DatabaseInstance.rune.findUnique({
               where: {
                 rune_name: etching.rune || "",
               },
             });
 
-            if (etching.premine) {
-              await DatabaseInstance.$transaction([
-                DatabaseInstance.rune.update({
-                  where: {
-                    rune_name: etching.rune || "",
-                  },
-                  data: {
-                    holder:
-                      pointer !== -1
-                        ? tx.vout[pointer].scriptPubKey.address
-                        : tx.vout[firstNonOpReturnVout].scriptPubKey.address,
-                    location_txid: tx.txid,
-                    location_vout:
-                      pointer !== -1 ? pointer : firstNonOpReturnVout,
-                  },
-                }),
-                DatabaseInstance.rune_action.create({
-                  data: {
-                    action_type: "mint",
-                    rune_id: runeId,
-                    rune_name: etching.rune || "",
-                    owner:
-                      pointer !== -1
-                        ? tx.vout[pointer].scriptPubKey.address
-                        : tx.vout[firstNonOpReturnVout].scriptPubKey.address,
-                    location_txid: tx.txid,
-                    location_vout:
-                      pointer !== -1 ? pointer : firstNonOpReturnVout,
-                    spent: 0,
-                  },
-                }),
-              ]);
+            if (!runeData) {
+              await DatabaseInstance.rune.create({
+                data: {
+                  rune_id: runeId,
+                  rune_name: etching.rune || "",
+                  symbol: etching.symbol || "",
+                  etching: tx.txid,
+                  holder: "",
+                  location_txid:
+                    "0000000000000000000000000000000000000000000000000000000000000000",
+                  location_vout: 0,
+                  burned: 0,
+                },
+              });
+
+              if (etching.premine) {
+                await DatabaseInstance.$transaction([
+                  DatabaseInstance.rune.update({
+                    where: {
+                      rune_name: etching.rune || "",
+                    },
+                    data: {
+                      holder:
+                        pointer !== -1
+                          ? tx.vout[pointer].scriptPubKey.address
+                          : tx.vout[firstNonOpReturnVout].scriptPubKey.address,
+                      location_txid: tx.txid,
+                      location_vout:
+                        pointer !== -1 ? pointer : firstNonOpReturnVout,
+                    },
+                  }),
+                  DatabaseInstance.rune_action.create({
+                    data: {
+                      action_type: "mint",
+                      rune_id: runeId,
+                      rune_name: etching.rune || "",
+                      owner:
+                        pointer !== -1
+                          ? tx.vout[pointer].scriptPubKey.address
+                          : tx.vout[firstNonOpReturnVout].scriptPubKey.address,
+                      location_txid: tx.txid,
+                      location_vout:
+                        pointer !== -1 ? pointer : firstNonOpReturnVout,
+                      spent: 0,
+                    },
+                  }),
+                ]);
+              }
             }
           }
 
@@ -451,20 +455,6 @@ const indexer = async () => {
 
           if (mint) {
             const rune = `${mint.block}:${mint.tx}`;
-
-            const existMint = await DatabaseInstance.rune_action.findFirst({
-              select: {
-                id: true,
-              },
-              where: {
-                action_type: "mint",
-                rune_id: rune,
-              },
-            });
-
-            if (existMint) {
-              continue;
-            }
 
             const runeData = await DatabaseInstance.rune.findUnique({
               select: {
