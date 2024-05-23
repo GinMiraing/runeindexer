@@ -11,7 +11,6 @@ model rune {
   id            Int    @id @default(autoincrement())
   rune_id       String @unique @db.VarChar(255)
   rune_name     String @unique @db.VarChar(255)
-  symbol        String @db.VarChar(255)
   etching       String @unique @db.Char(64)
   holder        String @db.VarChar(255)
   location_txid String @db.Char(64)

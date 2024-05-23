@@ -44,7 +44,7 @@ const indexer = async () => {
       for (let i = 0; i < transactions.length; i++) {
         const tx = transactions[i];
 
-        console.log(block.height + " / " + i + " / " + tx.hash);
+        console.log(block.height + " / " + i + " / " + tx.txid);
 
         // Skip coinbase transaction
         if (tx.vin.some((input) => input.coinbase)) {
@@ -370,7 +370,6 @@ const indexer = async () => {
                 data: {
                   rune_id: runeId,
                   rune_name: etching.rune || "",
-                  symbol: etching.symbol || "",
                   etching: tx.txid,
                   holder: "",
                   location_txid:
@@ -549,7 +548,7 @@ const indexer = async () => {
     } catch (e) {
       console.log(nextBlock);
       console.log(e);
-      await sleep(1000);
+      await sleep(10000);
       continue;
     }
   }
@@ -557,7 +556,7 @@ const indexer = async () => {
 
 const test = async () => {
   const payload = Buffer.from(
-    "020304f4b88594d28dbfbb8206010003c006055606010a000800",
+    "02070484d3a5eabad68bd3a9ff9583a506010003c4800205c6e7070a0108010c97a7331601",
     "hex",
   );
 
