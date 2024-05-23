@@ -26,7 +26,7 @@ const indexer = async () => {
     const synced = await RedisInstance.get("synced");
 
     if (cacheBlock && cacheBlock === latestBlock && synced) {
-      await sleep(5000);
+      await sleep(200000);
       continue;
     }
 
@@ -63,21 +63,12 @@ const indexer = async () => {
 
         let opReturnVout = -1;
         let firstNonOpReturnVout = -1;
-        let taprootInputIndex = -1;
 
         const outputCount = tx.vout.length;
 
         // Check if the input contains rune
         for (let j = 0; j < tx.vin.length; j++) {
           const input = tx.vin[j];
-
-          if (
-            input.txinwitness &&
-            input.txinwitness.length > 1 &&
-            taprootInputIndex === -1
-          ) {
-            taprootInputIndex = j;
-          }
 
           const inputRunes = await DatabaseInstance.rune.findMany({
             select: {
@@ -128,38 +119,16 @@ const indexer = async () => {
           if (!firstNonOpReturnOutput) continue;
 
           for (const rune of inputRuneList) {
-            await DatabaseInstance.$transaction([
-              DatabaseInstance.rune.update({
-                data: {
-                  location_txid: tx.txid,
-                  location_vout: firstNonOpReturnVout,
-                  holder: firstNonOpReturnOutput.scriptPubKey.address,
-                },
-                where: {
-                  id: rune.id,
-                },
-              }),
-              DatabaseInstance.rune_action.create({
-                data: {
-                  action_type: "transfer",
-                  rune_id: rune.rune_id,
-                  rune_name: rune.rune_name,
-                  location_txid: tx.txid,
-                  location_vout: firstNonOpReturnVout,
-                  owner: firstNonOpReturnOutput.scriptPubKey.address,
-                  spent: 0,
-                },
-              }),
-              DatabaseInstance.rune_action.updateMany({
-                where: {
-                  location_txid: rune.location_txid,
-                  location_vout: rune.location_vout,
-                },
-                data: {
-                  spent: 1,
-                },
-              }),
-            ]);
+            await DatabaseInstance.rune.update({
+              data: {
+                location_txid: tx.txid,
+                location_vout: firstNonOpReturnVout,
+                holder: firstNonOpReturnOutput.scriptPubKey.address,
+              },
+              where: {
+                id: rune.id,
+              },
+            });
           }
         } else {
           const transaction = Transaction.fromHex(tx.hex);
@@ -180,10 +149,6 @@ const indexer = async () => {
             }
 
             continue;
-          }
-
-          // etching behind 6 blocks
-          if (taprootInputIndex !== -1) {
           }
 
           const opReturnScript = script.decompile(opReturnOutput.script);
@@ -371,47 +336,25 @@ const indexer = async () => {
                   rune_id: runeId,
                   rune_name: etching.rune || "",
                   etching: tx.txid,
-                  holder: "",
+                  holder:
+                    etching.premine === "1"
+                      ? pointer !== -1
+                        ? tx.vout[pointer].scriptPubKey.address
+                        : tx.vout[firstNonOpReturnVout].scriptPubKey.address
+                      : "",
                   location_txid:
-                    "0000000000000000000000000000000000000000000000000000000000000000",
-                  location_vout: 0,
+                    etching.premine === "1"
+                      ? tx.txid
+                      : "0000000000000000000000000000000000000000000000000000000000000000",
+                  location_vout:
+                    etching.premine === "1"
+                      ? pointer !== -1
+                        ? pointer
+                        : firstNonOpReturnVout
+                      : 0,
                   burned: 0,
                 },
               });
-
-              if (etching.premine === "1") {
-                await DatabaseInstance.$transaction([
-                  DatabaseInstance.rune.update({
-                    where: {
-                      rune_name: etching.rune || "",
-                    },
-                    data: {
-                      holder:
-                        pointer !== -1
-                          ? tx.vout[pointer].scriptPubKey.address
-                          : tx.vout[firstNonOpReturnVout].scriptPubKey.address,
-                      location_txid: tx.txid,
-                      location_vout:
-                        pointer !== -1 ? pointer : firstNonOpReturnVout,
-                    },
-                  }),
-                  DatabaseInstance.rune_action.create({
-                    data: {
-                      action_type: "mint",
-                      rune_id: runeId,
-                      rune_name: etching.rune || "",
-                      owner:
-                        pointer !== -1
-                          ? tx.vout[pointer].scriptPubKey.address
-                          : tx.vout[firstNonOpReturnVout].scriptPubKey.address,
-                      location_txid: tx.txid,
-                      location_vout:
-                        pointer !== -1 ? pointer : firstNonOpReturnVout,
-                      spent: 0,
-                    },
-                  }),
-                ]);
-              }
             }
           }
 
@@ -430,38 +373,16 @@ const indexer = async () => {
                   continue;
                 }
 
-                await DatabaseInstance.$transaction([
-                  DatabaseInstance.rune.update({
-                    data: {
-                      location_txid: tx.txid,
-                      location_vout: edict.output,
-                      holder: output.scriptPubKey.address,
-                    },
-                    where: {
-                      id: itemData.id,
-                    },
-                  }),
-                  DatabaseInstance.rune_action.create({
-                    data: {
-                      action_type: "transfer",
-                      rune_id: itemData.rune_id,
-                      rune_name: itemData.rune_name,
-                      location_txid: tx.txid,
-                      location_vout: edict.output,
-                      owner: output.scriptPubKey.address,
-                      spent: 0,
-                    },
-                  }),
-                  DatabaseInstance.rune_action.updateMany({
-                    where: {
-                      location_txid: itemData.location_txid,
-                      location_vout: itemData.location_vout,
-                    },
-                    data: {
-                      spent: 1,
-                    },
-                  }),
-                ]);
+                await DatabaseInstance.rune.update({
+                  data: {
+                    location_txid: tx.txid,
+                    location_vout: edict.output,
+                    holder: output.scriptPubKey.address,
+                  },
+                  where: {
+                    id: itemData.id,
+                  },
+                });
               }
             }
           }
@@ -472,15 +393,15 @@ const indexer = async () => {
             const runeData = await DatabaseInstance.rune.findUnique({
               select: {
                 id: true,
-                rune_name: true,
+                location_txid: true,
               },
               where: {
                 rune_id: rune,
               },
             });
 
-            if (isInvalid) {
-              if (runeData) {
+            if (runeData) {
+              if (isInvalid) {
                 await DatabaseInstance.rune.update({
                   where: {
                     id: runeData.id,
@@ -489,52 +410,27 @@ const indexer = async () => {
                     burned: 1,
                   },
                 });
+              } else {
+                if (
+                  runeData.location_txid ===
+                  "0000000000000000000000000000000000000000000000000000000000000000"
+                ) {
+                  await DatabaseInstance.rune.update({
+                    where: {
+                      id: runeData.id,
+                    },
+                    data: {
+                      holder:
+                        pointer !== -1
+                          ? tx.vout[pointer].scriptPubKey.address
+                          : tx.vout[firstNonOpReturnVout].scriptPubKey.address,
+                      location_txid: tx.txid,
+                      location_vout:
+                        pointer !== -1 ? pointer : firstNonOpReturnVout,
+                    },
+                  });
+                }
               }
-              continue;
-            }
-
-            const exist = await DatabaseInstance.rune_action.findFirst({
-              select: {
-                id: true,
-              },
-              where: {
-                action_type: "mint",
-                rune_id: rune,
-              },
-            });
-
-            if (!exist && runeData) {
-              await DatabaseInstance.$transaction([
-                DatabaseInstance.rune.update({
-                  where: {
-                    id: runeData.id,
-                  },
-                  data: {
-                    holder:
-                      pointer !== -1
-                        ? tx.vout[pointer].scriptPubKey.address
-                        : tx.vout[firstNonOpReturnVout].scriptPubKey.address,
-                    location_txid: tx.txid,
-                    location_vout:
-                      pointer !== -1 ? pointer : firstNonOpReturnVout,
-                  },
-                }),
-                DatabaseInstance.rune_action.create({
-                  data: {
-                    action_type: "mint",
-                    rune_id: rune,
-                    rune_name: runeData.rune_name,
-                    location_txid: tx.txid,
-                    location_vout:
-                      pointer !== -1 ? pointer : firstNonOpReturnVout,
-                    owner:
-                      pointer !== -1
-                        ? tx.vout[pointer].scriptPubKey.address
-                        : tx.vout[firstNonOpReturnVout].scriptPubKey.address,
-                    spent: 0,
-                  },
-                }),
-              ]);
             }
           }
         }
@@ -555,10 +451,7 @@ const indexer = async () => {
 };
 
 const test = async () => {
-  const payload = Buffer.from(
-    "02070484d3a5eabad68bd3a9ff9583a506010003c4800205c6e7070a0108010c97a7331601",
-    "hex",
-  );
+  const payload = Buffer.from("0099a533e60c0102", "hex");
 
   const outputCount = 13;
 

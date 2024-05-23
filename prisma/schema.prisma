@@ -20,18 +20,3 @@ model rune {
   @@index([location_txid, location_vout, burned])
   @@index([holder, burned])
 }
-
-model rune_action {
-  id            Int    @id @default(autoincrement())
-  action_type   String @db.VarChar(255)
-  rune_id       String @db.VarChar(255)
-  rune_name     String @db.VarChar(255)
-  location_txid String @db.Char(64)
-  location_vout Int    @db.UnsignedInt
-  owner         String @db.VarChar(255)
-  spent         Int    @db.UnsignedTinyInt
-
-  @@index([rune_id, rune_name])
-  @@index([action_type, rune_id])
-  @@index([location_txid, location_vout, spent])
-}
