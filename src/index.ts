@@ -1,7 +1,7 @@
 import { Transaction, script } from "bitcoinjs-lib";
 import { config } from "dotenv";
 
-import { getBlock } from "./lib/block/api";
+import { getBlock, getLastBlockHash } from "./lib/block/api";
 import { TransactionResponse } from "./lib/block/type";
 import { decodeRuneName } from "./lib/runes/rune";
 import { payloadToIntegers } from "./lib/runes/runestone";
@@ -20,13 +20,23 @@ const indexer = async () => {
   while (true) {
     const transactions: TransactionResponse[] = [];
 
+    const latestBlock = await getLastBlockHash();
+
     const cacheBlock = await RedisInstance.get("last_indexed_block");
+    const synced = await RedisInstance.get("synced");
+
+    if (cacheBlock && cacheBlock === latestBlock && synced) {
+      await sleep(5000);
+      continue;
+    }
 
     let nextBlock =
       cacheBlock ||
       "0000000000000000000320283a032748cef8227873ff4872689bf23f1cda83a5";
 
     try {
+      await RedisInstance.del("synced");
+
       const block = await getBlock(nextBlock);
 
       transactions.push(...block.tx);
@@ -527,9 +537,11 @@ const indexer = async () => {
         }
       }
 
-      await RedisInstance.set("last_indexed_block", block.nextblockhash);
-
-      nextBlock = block.nextblockhash;
+      if (block.nextblockhash) {
+        await RedisInstance.set("last_indexed_block", block.nextblockhash);
+        await RedisInstance.set("synced", "true");
+        nextBlock = block.nextblockhash;
+      }
     } catch (e) {
       console.log(nextBlock);
       console.log(e);
