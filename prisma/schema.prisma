@@ -1,0 +1,31 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model rune {
+  id            Int    @id @default(autoincrement())
+  rune_id       String @unique @db.VarChar(255)
+  rune_name     String @unique @db.VarChar(255)
+  symbol        String @db.VarChar(255)
+  etching       String @unique @db.Char(64)
+  holder        String @db.VarChar(255)
+  location_txid String @db.Char(64)
+  location_vout Int    @db.UnsignedInt
+  burned        Int    @db.UnsignedTinyInt
+}
+
+model rune_action {
+  id            Int    @id @default(autoincrement())
+  action_type   String @db.VarChar(255)
+  rune_id       String @db.VarChar(255)
+  rune_name     String @db.VarChar(255)
+  location_txid String @db.Char(64)
+  location_vout Int    @db.UnsignedInt
+  owner         String @db.VarChar(255)
+  spent         Int    @db.UnsignedTinyInt
+}
