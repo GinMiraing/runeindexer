@@ -366,7 +366,7 @@ const indexer = async () => {
                 },
               });
 
-              if (etching.premine) {
+              if (etching.premine === "1") {
                 await DatabaseInstance.$transaction([
                   DatabaseInstance.rune.update({
                     where: {
