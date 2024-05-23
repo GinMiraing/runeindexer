@@ -28,4 +28,8 @@ model rune_action {
   location_vout Int    @db.UnsignedInt
   owner         String @db.VarChar(255)
   spent         Int    @db.UnsignedTinyInt
+
+  @@index([rune_id, rune_name])
+  @@index([action_type, rune_id])
+  @@index([location_txid, location_vout, spent])
 }

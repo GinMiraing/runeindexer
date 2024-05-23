@@ -452,6 +452,20 @@ const indexer = async () => {
           if (mint) {
             const rune = `${mint.block}:${mint.tx}`;
 
+            const existMint = await DatabaseInstance.rune_action.findFirst({
+              select: {
+                id: true,
+              },
+              where: {
+                action_type: "mint",
+                rune_id: rune,
+              },
+            });
+
+            if (existMint) {
+              continue;
+            }
+
             const runeData = await DatabaseInstance.rune.findUnique({
               select: {
                 id: true,
