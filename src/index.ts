@@ -71,7 +71,11 @@ const indexer = async () => {
         for (let j = 0; j < tx.vin.length; j++) {
           const input = tx.vin[j];
 
-          if (input.txinwitness && input.txinwitness.length > 1) {
+          if (
+            input.txinwitness &&
+            input.txinwitness.length > 1 &&
+            taprootInputIndex === -1
+          ) {
             taprootInputIndex = j;
           }
 
@@ -101,7 +105,7 @@ const indexer = async () => {
         for (let j = 0; j < tx.vout.length; j++) {
           const output = tx.vout[j];
 
-          if (output.value > 0) {
+          if (output.value > 0 && firstNonOpReturnVout === -1) {
             firstNonOpReturnVout = j;
           }
 
@@ -553,7 +557,7 @@ const indexer = async () => {
 
 const test = async () => {
   const payload = Buffer.from(
-    "020704d4b6fef2f78dafc0d6f58c845e01000388a104054206010a0108001601",
+    "020304f4b88594d28dbfbb8206010003c006055606010a000800",
     "hex",
   );
 
