@@ -26,7 +26,7 @@ const indexer = async () => {
     const synced = await RedisInstance.get("synced");
 
     if (cacheBlock && cacheBlock === latestBlock && synced) {
-      await sleep(200000);
+      await sleep(20000);
       continue;
     }
 
@@ -451,7 +451,10 @@ const indexer = async () => {
 };
 
 const test = async () => {
-  const payload = Buffer.from("0099a533e60c0102", "hex");
+  const payload = Buffer.from(
+    "020304b484a6f3fc86d1b488def7ce030101038889020542060a0a0a08001601",
+    "hex",
+  );
 
   const outputCount = 13;
 
